@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+	  <Nullable>enable</Nullable>
+	  <LangVersion>latest</LangVersion>
+	<Authors>Pedro Ávila Núñez</Authors>
+	<Description>Extensiones para Dapper con soporte de expresiones básicas. Requiere Dapper y Dapper.Contrib.</Description>
+	<PackageId>PAN.DapperLambdaSQL</PackageId>
+	<Title>PAN.DapperLambdaToSql</Title>
+	<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.1.66" />
+    <PackageReference Include="Dapper.Contrib" Version="2.0.78" />
+  </ItemGroup>
+
+	
+
+</Project>
