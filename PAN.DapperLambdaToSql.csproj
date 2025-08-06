@@ -9,8 +9,11 @@
 	<Description>Extensiones para Dapper con soporte de expresiones básicas. Requiere Dapper y Dapper.Contrib.</Description>
 	<PackageId>PAN.DapperLambdaSQL</PackageId>
 	<Title>PAN.DapperLambdaToSql</Title>
+	<PackageProjectUrl>https://github.com/PedroAvila/DapperQueryExpressions</PackageProjectUrl>
+	<RepositoryUrl>https://github.com/PedroAvila/DapperQueryExpressions</RepositoryUrl>
+	<RepositoryType>git</RepositoryType>
 	<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-	  <Version>1.0.1</Version>
+	  <Version>1.0.2</Version>
   </PropertyGroup>
 
 	<ItemGroup>
