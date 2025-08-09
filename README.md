@@ -1,6 +1,8 @@
 # PAN.DapperLambdaToSql
 
 **PAN.DapperLambdaToSql** es una librería ligera que extiende Dapper y Dapper.Contrib, permitiendo realizar operaciones genéricas como `UPDATE` y `EXIST` utilizando expresiones lambda (`Expression<Func<T, bool>>`), al estilo de Entity Framework.
+> ⚠️ **Importante:** Esta librería está diseñada para usarse **exclusivamente** con **Dapper** y **Dapper.Contrib**.
+> **Nota:** Esta librería no es compatible con Entity Framework ni con Entity Framework Core. Está enfocada en simplificar el uso de Dapper para operaciones comunes sin necesidad de escribir SQL manualmente.
 
 ## ✨ Características
 
