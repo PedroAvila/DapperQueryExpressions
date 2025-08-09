@@ -36,8 +36,6 @@ UPDATE NombreTabla SET Columna1 = @Columna1, Columna2 = @Columna2 WHERE Id = @Id
 
 ```
 
-# 🚀 Uso
-
 ## 📌 Actualizar cualquier entidad con UpdateAsync (actualización parcial)
 
 Este método de extensión permite actualizar dinámicamente cualquier entidad genérica sin escribir SQL manualmente.
