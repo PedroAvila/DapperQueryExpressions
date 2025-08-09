@@ -36,6 +36,68 @@ UPDATE NombreTabla SET Columna1 = @Columna1, Columna2 = @Columna2 WHERE Id = @Id
 
 ```
 
+# 🚀 Uso
+
+## 📌 Actualizar cualquier entidad con UpdateAsync (actualización parcial)
+
+Este método de extensión permite actualizar dinámicamente cualquier entidad genérica sin escribir SQL manualmente.
+Solo actualizará las propiedades `no nulas` y diferentes de `Id`, por lo que es ideal para escenarios de actualización parcial (PATCH).
+
+- ✅ Ventaja: No se sobreescriben columnas con `null`, `0` o `DateTime.MinValue` si no las envías.
+
+### Ejemplo de entidad:
+
+```csharp
+public class Gym
+{
+    public int Id { get; set; }
+    public int? Code { get; set; }       // Campo que no se actualiza si no se envía
+    public string Name { get; set; }
+    public string Address { get; set; }
+    public string Phone { get; set; }
+    public DateTime? CreatedAt { get; set; } // Tampoco se actualiza si no se envía
+}
+```
+
+### Ejemplo de uso en un servicio o handler:
+
+```csharp
+var gym = new Gym
+{
+    Id = 1,
+    Name = "New Name",
+    Phone = "999-888-777"
+    // No enviamos Code ni CreatedAt => no se actualizan
+};
+
+bool actualizado = await gymRepository.UpdateGymAsync(gym);
+
+if (actualizado)
+{
+    Console.WriteLine("Actualización parcial exitosa 🚀");
+}
+else
+{
+    Console.WriteLine("No se actualizó ningún registro.");
+}
+```
+
+### Ejemplo de uso en un repositorio
+
+```csharp
+public async Task<bool> UpdateGymAsync(Gym gym)
+{
+    return await _dbConnection.UpdateAsync(gym);
+}
+```
+
+💡 **Notas:**
+
+- La propiedad `Id` se usa exclusivamente para el `WHERE` en el `UPDATE`.
+- Las propiedades con `null` se ignoran y no se incluyen en la sentencia SQL.
+- Funciona con cualquier tipo de entidad que tenga un `Id`.
+
+
 ### 📌 Verificar existencia con ExistAsync
 Este método permite consultar si existe una entidad que cumpla con una condición específica, usando expresiones lambda al estilo de Entity Framework.
 
