@@ -5,11 +5,18 @@ namespace PAN.DapperLambdaToSql;
 
 public class SqlExpressionVisitor : ExpressionVisitor
 {
+    private readonly ISqlDialect _dialect;
+
     public string Sql { get; private set; }
     public DynamicParameters Parameters { get; private set; }
 
-    public SqlExpressionVisitor()
+    public SqlExpressionVisitor() : this(SqlDialects.None)
     {
+    }
+
+    public SqlExpressionVisitor(ISqlDialect dialect)
+    {
+        _dialect = dialect ?? SqlDialects.None;
         Sql = "";
         Parameters = new DynamicParameters();
     }
@@ -97,7 +104,9 @@ public class SqlExpressionVisitor : ExpressionVisitor
 
     protected override Expression VisitMember(MemberExpression node)
     {
-        Sql += node.Member.Name;
+        // Aquí el miembro siempre representa una columna: los valores del lado derecho
+        // los desvía VisitMemberAccess antes de llegar a este punto.
+        Sql += _dialect.Delimit(node.Member.Name);
         return node;
     }
 }

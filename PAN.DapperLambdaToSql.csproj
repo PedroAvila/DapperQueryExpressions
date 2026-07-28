@@ -6,15 +6,40 @@
 	  <Nullable>enable</Nullable>
 	  <LangVersion>latest</LangVersion>
 	<Authors>Pedro Ávila Núñez</Authors>
-	<Description>Extensiones para Dapper con soporte de expresiones básicas. Requiere Dapper y Dapper.Contrib.</Description>
+	<Description>Extensiones para Dapper con soporte de expresiones básicas. Compatible con SQL Server y MySQL. Requiere Dapper y Dapper.Contrib.</Description>
 	<PackageId>PAN.DapperLambdaSQL</PackageId>
 	<Title>PAN.DapperLambdaToSql</Title>
 	<PackageProjectUrl>https://github.com/PedroAvila/DapperQueryExpressions</PackageProjectUrl>
 	<RepositoryUrl>https://github.com/PedroAvila/DapperQueryExpressions</RepositoryUrl>
 	<RepositoryType>git</RepositoryType>
 	<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-	  <Version>1.0.2</Version>
+	  <Version>1.1.0</Version>
+	<PackageReadmeFile>README.md</PackageReadmeFile>
+	<PackageTags>dapper;dapper-contrib;sql;lambda;expressions;sqlserver;mysql;orm;micro-orm</PackageTags>
+	<PackageReleaseNotes>
+1.1.0
+- Compatibilidad con SQL Server y MySQL: los identificadores se delimitan segun el motor,
+  detectado a partir del tipo de conexion. Permite columnas con nombre reservado (Key, Order...).
+- Se respetan [Write(false)] y [Computed] de Dapper.Contrib: las propiedades de navegacion
+  y las columnas calculadas dejan de incluirse en el UPDATE.
+- La clave primaria se resuelve por [Key]/[ExplicitKey] o por convencion (Id, ID, Clase+Id),
+  en lugar de estar fijada al nombre literal "Id".
+- La cache de nombres de tabla pasa a ser segura para concurrencia.
+	</PackageReleaseNotes>
   </PropertyGroup>
+
+	<!--
+		El proyecto vive en la raíz del repositorio, así que su globbing por defecto
+		(**/*.cs) recogería también el código del proyecto de pruebas.
+	-->
+	<ItemGroup>
+		<Compile Remove="tests/**" />
+		<None Remove="tests/**" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="README.md" Pack="true" PackagePath="\" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Dapper" Version="2.1.66">
