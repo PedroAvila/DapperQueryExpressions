@@ -6,17 +6,26 @@
 	  <Nullable>enable</Nullable>
 	  <LangVersion>latest</LangVersion>
 	<Authors>Pedro Ávila Núñez</Authors>
-	<Description>Extensiones para Dapper con soporte de expresiones básicas. Compatible con SQL Server y MySQL. Requiere Dapper y Dapper.Contrib.</Description>
+	<Description>Extensiones para Dapper con soporte de expresiones lambda (igualdad, comparaciones, AND/OR, Contains), consulta filtrada y paginado en memoria. Compatible con SQL Server y MySQL. Requiere Dapper y Dapper.Contrib.</Description>
 	<PackageId>PAN.DapperLambdaSQL</PackageId>
 	<Title>PAN.DapperLambdaToSql</Title>
 	<PackageProjectUrl>https://github.com/PedroAvila/DapperQueryExpressions</PackageProjectUrl>
 	<RepositoryUrl>https://github.com/PedroAvila/DapperQueryExpressions</RepositoryUrl>
 	<RepositoryType>git</RepositoryType>
 	<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-	  <Version>1.1.0</Version>
+	  <Version>1.2.0</Version>
 	<PackageReadmeFile>README.md</PackageReadmeFile>
-	<PackageTags>dapper;dapper-contrib;sql;lambda;expressions;sqlserver;mysql;orm;micro-orm</PackageTags>
+	<PackageTags>dapper;dapper-contrib;sql;lambda;expressions;sqlserver;mysql;orm;micro-orm;paging</PackageTags>
 	<PackageReleaseNotes>
+1.2.0
+- Nuevo QueryAsync&lt;T&gt;: devuelve las filas que cumplen un predicado (SELECT filtrado),
+  a diferencia de ExistAsync, que solo confirma si existe alguna.
+- El traductor de expresiones ahora soporta !=, &lt;, &lt;=, &gt;, &gt;=, || y agrupamiento
+  con parentesis, ademas de == y &amp;&amp;.
+- Contains(...) sobre propiedades string se traduce a LIKE.
+- Nuevo OrderByProperty/ToPagedResult (PagingExtensions): orden y paginado genericos en
+  memoria por nombre de columna, ya que Dapper no expone una capa IQueryable diferida.
+
 1.1.0
 - Compatibilidad con SQL Server y MySQL: los identificadores se delimitan segun el motor,
   detectado a partir del tipo de conexion. Permite columnas con nombre reservado (Key, Order...).
