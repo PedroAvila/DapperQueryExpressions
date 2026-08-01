@@ -97,4 +97,20 @@ public static class DapperExtensions
         // Ejecutar la consulta SQL utilizando Dapper y devolver las filas encontradas
         return await connection.QueryAsync<T>(query, whereClause.Parameters);
     }
+
+    /// <summary>
+    /// Conveniencia que une <see cref="QueryAsync{T}"/> con
+    /// <c>PagingExtensions.ToPagedResult</c> para no repetir ambos pasos en
+    /// cada repositorio. El orden/paginado se resuelve en memoria sobre las
+    /// filas ya traídas -ver docs/adr/0006-.
+    /// </summary>
+    public static async Task<PagedResult<T>> QueryPagedAsync<T>(
+        this IDbConnection connection,
+        Expression<Func<T, bool>> predicate,
+        int page, int pageSize,
+        params (string Property, bool Descending)[] sortKeys)
+    {
+        var items = await connection.QueryAsync(predicate);
+        return items.ToPagedResult(page, pageSize, sortKeys);
+    }
 }

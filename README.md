@@ -10,7 +10,7 @@
 - ✅ Verificación de existencia con `ExistAsync`
 - ✅ Consulta de filas que cumplen un predicado con `QueryAsync`
 - ✅ Predicados con `==`, `!=`, `<`, `<=`, `>`, `>=`, `&&`, `||`, `Contains` (`LIKE`) y agrupamiento con paréntesis
-- ✅ Orden y paginado genéricos en memoria con `OrderByProperty` / `ToPagedResult`
+- ✅ Orden y paginado genéricos en memoria con `OrderByProperty` / `ToPagedResult`, con soporte de desempate por varias claves (`OrderByProperties`) y `QueryPagedAsync` como atajo
 - ✅ Compatible con `Dapper` y `Dapper.Contrib`: respeta `[Table]`, `[Key]`, `[ExplicitKey]`, `[Write(false)]` y `[Computed]`
 - ✅ Varias convenciones de clave primaria: `Id`, `ID` y `Clase+Id`
 - ✅ Funciona con **SQL Server** y **MySQL / MariaDB**, delimitando los identificadores según el motor
@@ -249,7 +249,34 @@ PagedResult<User> pagina = usuarios.ToPagedResult(page: 2, pageSize: 20, orderBy
 // pagina.Items, pagina.Page, pagina.PageSize, pagina.TotalCount, pagina.TotalPages
 ```
 
-`orderBy` recibe el nombre de una propiedad pública de `T` (no distingue mayúsculas/minúsculas); si no existe, lanza `ArgumentException`. No soporta rutas anidadas (`"Cliente.Nombre"`) ni múltiples claves de orden.
+`orderBy` recibe el nombre de una propiedad pública de `T` (no distingue mayúsculas/minúsculas); si no existe, lanza `ArgumentException`. No soporta rutas anidadas (`"Cliente.Nombre"`).
+
+#### Desempate con varias claves de orden
+
+Para ordenar por más de una propiedad, `OrderByProperties` y el overload correspondiente de `ToPagedResult` reciben `params (string Property, bool Descending)[]`:
+
+```csharp
+var usuarios = await _context.QueryAsync<User>(u => u.GymId == 1);
+
+// Ordena por RoleId y, dentro de cada rol, por Name
+PagedResult<User> pagina = usuarios.ToPagedResult(page: 1, pageSize: 20,
+    (nameof(User.RoleId), false), (nameof(User.Name), false));
+```
+
+La primera clave se aplica con `OrderBy`/`OrderByDescending` y el resto encadena `ThenBy`/`ThenByDescending`, así que cada clave puede tener su propio sentido (ascendente o descendente). `OrderByProperties` exige al menos una clave (lanza `ArgumentException` con un array vacío); el overload de `ToPagedResult` con `sortKeys`, en cambio, trata un array vacío como "sin orden" y preserva el orden de origen.
+
+#### `QueryPagedAsync`: `QueryAsync` + `ToPagedResult` en una sola llamada
+
+Para no repetir esos dos pasos en cada repositorio:
+
+```csharp
+PagedResult<User> pagina = await _context.QueryPagedAsync<User>(
+    u => u.GymId == 1,
+    page: 1, pageSize: 20,
+    (nameof(User.RoleId), false), (nameof(User.Name), false));
+```
+
+Es pura conveniencia: internamente ejecuta `QueryAsync<T>(predicate)` y aplica `ToPagedResult` sobre el resultado, en memoria.
 
 
 

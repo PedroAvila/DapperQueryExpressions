@@ -13,10 +13,16 @@
 	<RepositoryUrl>https://github.com/PedroAvila/DapperQueryExpressions</RepositoryUrl>
 	<RepositoryType>git</RepositoryType>
 	<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-	  <Version>1.2.0</Version>
+	  <Version>1.3.0</Version>
 	<PackageReadmeFile>README.md</PackageReadmeFile>
 	<PackageTags>dapper;dapper-contrib;sql;lambda;expressions;sqlserver;mysql;orm;micro-orm;paging</PackageTags>
 	<PackageReleaseNotes>
+1.3.0
+- Nuevo OrderByProperties/ToPagedResult(params (string, bool)[] sortKeys): orden con desempate
+  por varias claves, ademas de la clave unica ya soportada.
+- Nuevo QueryPagedAsync&lt;T&gt;: une QueryAsync&lt;T&gt;(predicate) + ToPagedResult(...) en una sola
+  llamada, para no repetir ambos pasos en cada repositorio.
+
 1.2.0
 - Nuevo QueryAsync&lt;T&gt;: devuelve las filas que cumplen un predicado (SELECT filtrado),
   a diferencia de ExistAsync, que solo confirma si existe alguna.

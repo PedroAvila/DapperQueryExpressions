@@ -54,4 +54,18 @@ internal static class SqlCapture
 
         throw new InvalidOperationException("No se capturó SQL: la consulta nunca se ejecutó.");
     }
+
+    public static async Task<string> QueryPagedAsync<T>(DbConnection connection, Expression<Func<T, bool>> predicate)
+    {
+        try
+        {
+            await connection.QueryPagedAsync(predicate, page: 1, pageSize: 10);
+        }
+        catch (SqlCapturedException ex)
+        {
+            return ex.Sql;
+        }
+
+        throw new InvalidOperationException("No se capturó SQL: la consulta nunca se ejecutó.");
+    }
 }
