@@ -23,60 +23,82 @@ public class SqlExpressionVisitor : ExpressionVisitor
 
     protected override Expression VisitBinary(BinaryExpression node)
     {
-        if (node.NodeType == ExpressionType.Equal)
+        switch (node.NodeType)
         {
-            Visit(node.Left);
-            Sql += " = ";
-
-            if (node.Right.NodeType == ExpressionType.MemberAccess)
-            {
-                VisitMemberAccess((MemberExpression)node.Right);
-            }
-            else
-            {
-                Visit(node.Right);
-            }
-        }
-        else if (node.NodeType == ExpressionType.AndAlso)
-        {
-            // Si es AndAlso, maneja la expresión
-            VisitAndAlsoBinary(node);
-        }
-        else
-        {
-            throw new NotSupportedException("Only equality comparison is supported.");
+            case ExpressionType.AndAlso:
+                VisitLogicalBinary(node, " AND ");
+                break;
+            case ExpressionType.OrElse:
+                VisitLogicalBinary(node, " OR ");
+                break;
+            case ExpressionType.Equal:
+            case ExpressionType.NotEqual:
+            case ExpressionType.LessThan:
+            case ExpressionType.LessThanOrEqual:
+            case ExpressionType.GreaterThan:
+            case ExpressionType.GreaterThanOrEqual:
+                VisitComparisonBinary(node, ComparisonOperatorFor(node.NodeType));
+                break;
+            default:
+                throw new NotSupportedException($"Only equality comparison is supported. Unsupported operator: '{node.NodeType}'.");
         }
 
         return node;
     }
 
-    private void VisitAndAlsoBinary(BinaryExpression node)
+    private static string ComparisonOperatorFor(ExpressionType nodeType) => nodeType switch
+    {
+        ExpressionType.Equal => " = ",
+        ExpressionType.NotEqual => " <> ",
+        ExpressionType.LessThan => " < ",
+        ExpressionType.LessThanOrEqual => " <= ",
+        ExpressionType.GreaterThan => " > ",
+        ExpressionType.GreaterThanOrEqual => " >= ",
+        _ => throw new NotSupportedException($"Unsupported comparison operator: '{nodeType}'."),
+    };
+
+    private void VisitComparisonBinary(BinaryExpression node, string sqlOperator)
     {
         Visit(node.Left);
-        Sql += " AND ";
+        Sql += sqlOperator;
+        VisitValueOperand(node.Right);
+    }
 
-        if (node.Right.NodeType == ExpressionType.Equal)
+    private void VisitValueOperand(Expression operand)
+    {
+        if (operand.NodeType == ExpressionType.MemberAccess)
         {
-            VisitEqualityBinary((BinaryExpression)node.Right);
+            VisitMemberAccess((MemberExpression)operand);
         }
         else
         {
-            throw new NotSupportedException("Unsupported AndAlso expression.");
+            Visit(operand);
         }
     }
 
-    private void VisitEqualityBinary(BinaryExpression node)
+    private void VisitLogicalBinary(BinaryExpression node, string sqlOperator)
     {
-        Visit(node.Left);
-        Sql += " = ";
+        VisitLogicalOperand(node.Left, node.NodeType);
+        Sql += sqlOperator;
+        VisitLogicalOperand(node.Right, node.NodeType);
+    }
 
-        if (node.Right.NodeType == ExpressionType.MemberAccess)
+    private void VisitLogicalOperand(Expression operand, ExpressionType parentNodeType)
+    {
+        // Paréntesis mínimos: solo hace falta envolver un OrElse cuando cuelga
+        // de un AndAlso, porque AND liga más fuerte que OR tanto en C# como en SQL.
+        var needsParens = parentNodeType == ExpressionType.AndAlso
+            && operand is BinaryExpression { NodeType: ExpressionType.OrElse };
+
+        if (needsParens)
         {
-            VisitMemberAccess((MemberExpression)node.Right);
+            Sql += "(";
+            Visit(operand);
+            Sql += ")";
         }
         else
         {
-            Visit(node.Right);
+            Visit(operand);
         }
     }
 
@@ -92,15 +114,11 @@ public class SqlExpressionVisitor : ExpressionVisitor
 
     private void VisitMemberAccess(MemberExpression node)
     {
-        // Obtener el valor de la propiedad o campo
-        var value = Expression.Lambda(node).Compile().DynamicInvoke();
-
-        // Crear una expresión constante con el valor
-        var constant = Expression.Constant(value);
-
-        // Llamar a VisitConstant para manejar el valor como una constante
-        VisitConstant(constant);
+        VisitConstant(Expression.Constant(ResolveValue(node)));
     }
+
+    private static object? ResolveValue(Expression node)
+        => Expression.Lambda(node).Compile().DynamicInvoke();
 
     protected override Expression VisitMember(MemberExpression node)
     {
@@ -109,4 +127,29 @@ public class SqlExpressionVisitor : ExpressionVisitor
         Sql += _dialect.Delimit(node.Member.Name);
         return node;
     }
+
+    protected override Expression VisitMethodCall(MethodCallExpression node)
+    {
+        if (IsStringContains(node))
+        {
+            Visit(node.Object!); // emite la columna, p. ej. u.Name -> Name
+            Sql += " LIKE ";
+
+            var rawValue = ResolveValue(node.Arguments[0]);
+            var pattern = rawValue is null ? null : $"%{rawValue}%";
+            VisitConstant(Expression.Constant(pattern));
+
+            return node;
+        }
+
+        throw new NotSupportedException(
+            $"El método '{node.Method.DeclaringType?.Name}.{node.Method.Name}' no está soportado. " +
+            "Solo string.Contains(...) se traduce a LIKE.");
+    }
+
+    private static bool IsStringContains(MethodCallExpression node)
+        => node.Method.DeclaringType == typeof(string)
+           && node.Method.Name == nameof(string.Contains)
+           && node.Object != null
+           && node.Arguments.Count == 1;
 }

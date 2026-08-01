@@ -8,6 +8,9 @@
 
 - ✅ Actualización de entidades genéricas con `UpdateAsync`
 - ✅ Verificación de existencia con `ExistAsync`
+- ✅ Consulta de filas que cumplen un predicado con `QueryAsync`
+- ✅ Predicados con `==`, `!=`, `<`, `<=`, `>`, `>=`, `&&`, `||`, `Contains` (`LIKE`) y agrupamiento con paréntesis
+- ✅ Orden y paginado genéricos en memoria con `OrderByProperty` / `ToPagedResult`
 - ✅ Compatible con `Dapper` y `Dapper.Contrib`: respeta `[Table]`, `[Key]`, `[ExplicitKey]`, `[Write(false)]` y `[Computed]`
 - ✅ Varias convenciones de clave primaria: `Id`, `ID` y `Clase+Id`
 - ✅ Funciona con **SQL Server** y **MySQL / MariaDB**, delimitando los identificadores según el motor
@@ -195,8 +198,58 @@ Ejemplo:
 bool existe = await _context.ExistAsync<User>(x => x.Email == "test@example.com");
 ```
 
+### 📌 Consultar filas con QueryAsync
 
+Este método devuelve las filas que cumplen el predicado, al estilo de un `Where()` de Entity Framework — a diferencia de `ExistAsync`, que solo devuelve `bool`.
 
+```csharp
+// En tu servicio o repositorio genérico
+public async Task<IEnumerable<T>> QueryAsync(Expression<Func<T, bool>> predicate)
+{
+    return await _context.QueryAsync(predicate);
+}
+```
+
+Ejemplo:
+```csharp
+IEnumerable<User> usuarios = await _context.QueryAsync<User>(u => u.RoleId == 2 && u.Name.Contains("Pedro"));
+```
+
+### 🔎 Operadores soportados en los predicados
+
+Tanto `ExistAsync` como `QueryAsync` reciben un `Expression<Func<T, bool>>` y lo traducen a SQL. Están soportados:
+
+| Expresión C# | SQL generado |
+|---|---|
+| `==` | `=` |
+| `!=` | `<>` |
+| `<`, `<=`, `>`, `>=` | `<`, `<=`, `>`, `>=` |
+| `&&` | `AND` |
+| `\|\|` | `OR` |
+| `x.Prop.Contains("valor")` | `LIKE '%valor%'` |
+
+Se pueden combinar libremente, incluso con agrupamiento entre paréntesis — se agregan los paréntesis mínimos necesarios para que el SQL se lea igual que la expresión de C#:
+
+```csharp
+await _context.QueryAsync<User>(u => u.Name == "Pedro" && (u.RoleId == 2 || u.RoleId == 3));
+// WHERE Name = @param0 AND (RoleId = @param1 OR RoleId = @param2)
+```
+
+> ⚠️ `Contains` no escapa `%` ni `_` en el valor; si tu dato los trae, se interpretan como comodines de `LIKE`. Cualquier otro método (`StartsWith`, `Contains` sobre una lista, etc.) lanza `NotSupportedException`.
+
+### 📄 Orden y paginado en memoria con PagingExtensions
+
+Dapper no tiene una capa `IQueryable` diferida como Entity Framework, así que no hay forma de traducir un "ordená por este nombre de columna" hasta el SQL sin reimplementar esa capa. `OrderByProperty` y `ToPagedResult` resuelven eso **en memoria**, sobre una secuencia ya traída (por ejemplo, el resultado de `QueryAsync`):
+
+```csharp
+var usuarios = await _context.QueryAsync<User>(u => u.GymId == 1);
+
+PagedResult<User> pagina = usuarios.ToPagedResult(page: 2, pageSize: 20, orderBy: "Name");
+
+// pagina.Items, pagina.Page, pagina.PageSize, pagina.TotalCount, pagina.TotalPages
+```
+
+`orderBy` recibe el nombre de una propiedad pública de `T` (no distingue mayúsculas/minúsculas); si no existe, lanza `ArgumentException`. No soporta rutas anidadas (`"Cliente.Nombre"`) ni múltiples claves de orden.
 
 
 

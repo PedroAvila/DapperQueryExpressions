@@ -80,4 +80,21 @@ public static class DapperExtensions
         // Si el recuento es mayor que cero, la entidad existe
         return count > 0;
     }
+
+    public static async Task<IEnumerable<T>> QueryAsync<T>(this IDbConnection connection, Expression<Func<T, bool>> predicate)
+    {
+        Type entityType = typeof(T);
+
+        var dialect = DapperHelper.GetDialect(connection);
+        string tableName = DapperHelper.GetTableName(entityType);
+
+        // Construir la consulta SQL
+        var query = $"SELECT * FROM {dialect.Delimit(tableName)} WHERE ";
+
+        var whereClause = DapperHelper.ToSql(predicate, dialect);
+        query += whereClause.Sql;
+
+        // Ejecutar la consulta SQL utilizando Dapper y devolver las filas encontradas
+        return await connection.QueryAsync<T>(query, whereClause.Parameters);
+    }
 }

@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-`PAN.DapperLambdaToSql` — a single `netstandard2.0` class library published to NuGet. It adds two extension methods to `IDbConnection` (`UpdateAsync`, `ExistAsync`) that build SQL from entity reflection and lambda expressions, in the style of EF Core, on top of Dapper + Dapper.Contrib.
+`PAN.DapperLambdaToSql` — a single `netstandard2.0` class library published to NuGet. It adds extension methods to `IDbConnection` (`UpdateAsync`, `ExistAsync`, `QueryAsync`) that build SQL from entity reflection and lambda expressions, in the style of EF Core, on top of Dapper + Dapper.Contrib. `PagingExtensions` adds in-memory `OrderByProperty`/`ToPagedResult` for generic ordering/paging over an already-materialized `IEnumerable<T>` — Dapper has no deferred `IQueryable`-style layer, so that's resolved after the fact rather than translated to SQL.
 
-The library itself is four small files; tests live in [tests/PAN.DapperLambdaToSql.Tests/](tests/PAN.DapperLambdaToSql.Tests/). There is no CI.
+The library itself is five small files; tests live in [tests/PAN.DapperLambdaToSql.Tests/](tests/PAN.DapperLambdaToSql.Tests/). There is no CI.
 
 ## Commands
 
@@ -28,12 +28,13 @@ Bumping `<Version>` in [PAN.DapperLambdaToSql.csproj](PAN.DapperLambdaToSql.cspr
 
 ## Architecture
 
-Four files, layered:
+Five files, layered:
 
-1. [DapperExtensions.cs](DapperExtensions.cs) — the public surface. `UpdateAsync<T>` reflects over public instance properties and `ExistAsync<T>` translates a predicate; both resolve the table name through `DapperHelper` and execute via Dapper.
+1. [DapperExtensions.cs](DapperExtensions.cs) — the public SQL-generating surface. `UpdateAsync<T>` reflects over public instance properties, `ExistAsync<T>` translates a predicate to check existence (`SELECT COUNT(*)`), and `QueryAsync<T>` translates a predicate to fetch matching rows (`SELECT *`); all three resolve the table name through `DapperHelper` and execute via Dapper.
 2. [DapperHelper.cs](DapperHelper.cs) — reflection/metadata layer: `GetTableName` (Dapper.Contrib `[Table]` attribute, else type name + `"s"`, cached by `RuntimeTypeHandle`), `GetKeyProperty`, the `IsWriteable`/`IsComputed` attribute checks, and `ToSql`, a thin facade that runs the visitor and returns `(Sql, DynamicParameters)`.
 3. [SqlExpressionVisitor.cs](SqlExpressionVisitor.cs) — an `ExpressionVisitor` that turns `Expression<Func<T, bool>>` into a WHERE fragment plus parameters.
 4. [SqlDialects.cs](SqlDialects.cs) — `ISqlDialect.Delimit`, the only thing that differs per engine. `SqlServerDialect` (`[x]`), `MySqlDialect` (`` `x` ``), `NoDelimiterDialect` (pre-multi-engine behavior, used for unrecognized providers).
+5. [PagingExtensions.cs](PagingExtensions.cs) — pure in-memory helpers, no SQL/`IDbConnection` involved: `OrderByProperty<T>` sorts an `IEnumerable<T>` by a property name resolved via reflection, `ToPagedResult<T>` applies that and slices into a `PagedResult<T>`. See [docs/adr/0006](docs/adr/0006-orden-y-paginado-en-memoria.md).
 
 ### Dialect selection
 
@@ -47,7 +48,7 @@ Columns are delimited, parameters never: `` `Key` = @Key `` is valid, `@`Key`` i
 
 Parameters are named positionally as `@param0`, `@param1`, … and registered with the `@` already in the name.
 
-Supported today: `==` and `&&` only. Everything else throws `NotSupportedException`. `||`, `!=`, comparisons, `Contains`, and nested/parenthesized grouping are unimplemented — adding them means extending `VisitBinary` and the `VisitAndAlsoBinary` chain, which currently only accepts an `Equal` node on its right side.
+Supported: `==`, `!=` (→ `<>`, the ANSI form, not `!=`), `<`, `<=`, `>`, `>=`, `&&`, `||`, `string.Contains(...)` (→ `LIKE '%value%'`, no wildcard-escaping), and arbitrary nested/parenthesized AND/OR grouping. `VisitBinary` dispatches by `NodeType` to `VisitComparisonBinary` (comparisons) or `VisitLogicalBinary` (AND/OR); `VisitMethodCall` handles `string.Contains` and throws `NotSupportedException` for anything else (previously it silently mis-emitted SQL for any method call). Grouping uses *minimal parenthesization*: a sub-expression is only wrapped in parens when it's an `OrElse` node used as a direct operand of an `AndAlso` node — SQL's `AND`-before-`OR` precedence matches C#'s, so that's the only case where the default grouping would otherwise be wrong. See [docs/adr/0005](docs/adr/0005-alcance-de-operadores-y-agrupamiento.md).
 
 ### UpdateAsync conventions
 

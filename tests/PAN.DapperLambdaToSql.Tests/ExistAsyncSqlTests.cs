@@ -51,6 +51,19 @@ public abstract class ExistAsyncSqlTests
 
         Assert.Equal($"SELECT COUNT(*) FROM {D("Users")} WHERE {D("Name")} = @param0", sql);
     }
+
+    [Fact]
+    public async Task ExistAsync_WhenPredicateUsesOrElseGrouping_ShouldDelimitAndParenthesize()
+    {
+        using var connection = CreateConnection();
+
+        var sql = await SqlCapture.ExistAsync<User>(connection,
+            u => u.Name == "Pedro" && (u.RoleId == 2 || u.RoleId == 3));
+
+        Assert.Equal(
+            $"SELECT COUNT(*) FROM {D("Users")} WHERE {D("Name")} = @param0 AND ({D("RoleId")} = @param1 OR {D("RoleId")} = @param2)",
+            sql);
+    }
 }
 
 public class ExistAsyncMySqlTests : ExistAsyncSqlTests
